@@ -1,0 +1,21 @@
+{
+    "name": "SlimEmail",
+    "version": "0.0.0",
+    "description": "Library to send email using Gmail with wifi client",
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/sachiger/SilmEmail.git"
+    },
+    "authors": [
+        {
+            "name": "Sachi Gerlitz",
+            "email": "sachi@gerlitz.co.il",
+            "url": "https://sachigerlitz.smugmug.com/",
+            "maintainer": true    
+        }
+    ],
+    "license": "MIT",
+    "frameworks": ["arduino"],
+    "platforms": ["espressif8266"]
+}

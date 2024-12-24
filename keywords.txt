@@ -1,0 +1,24 @@
+#######################################
+# Syntax Coloring Map For SlimEmail
+# Created by Sachi Gerlitz, 24-XII-2024 ver 20
+#######################################
+#######################################
+#######################################
+# Library (KEYWORD3)
+#######################################
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+EmailControl   KEYWORD1
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+begin   KEYWORD2
+GenericEmailSend  KEYWORD2
+sendSlimEmail  KEYWORD2
+ServerResponseAnlysis  KEYWORD2
+sendCommand  KEYWORD2
+base64Encode  KEYWORD2
+ParseReplaceBR  KEYWORD2
+getVersion  KEYWORD2
+EmailBegin  KEYWORD2

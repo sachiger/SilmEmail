@@ -1,12 +1,14 @@
 /*
  * Configuration header file for Gamil access
  *
- * V0 20-XII-2024   []
+ * V0 25-XII-2024   []
  */
 #ifndef EmailConfiguration_h
     #define EmailConfiguration_h 1
     
-    #define SimpleEmailVersion  "0.0.0"         // library version
+    #ifndef SimpleEmailVersion
+        #define SimpleEmailVersion  "0.0.x"     // library version
+    #endif  //SimpleEmailVersion
     #define BACKUPVERSION   0                   // {1 for backup,0 operational}
     //#include    "Main.h"
 

@@ -1,6 +1,6 @@
 {
     "name": "SlimEmail",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "description": "Library to send email using Gmail with wifi client",
     "repository":
     {
@@ -17,5 +17,10 @@
     ],
     "license": "MIT",
     "frameworks": ["arduino"],
-    "platforms": ["espressif8266"]
+    "platforms": ["espressif8266"],
+    "build": {
+        "flags": [
+          "-D SimpleEmailVersion=\\\"0.0.1\\\""
+        ]
+      }
 }

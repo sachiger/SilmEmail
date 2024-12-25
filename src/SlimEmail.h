@@ -2,9 +2,9 @@
  * header file for slim and simple email sending
  *
  * in this file:    GenericEmailSend; sendSlimEmail; ServerResponseAnlysis; sendCommand; base64Encode; 
- *                  ParseReplaceBR; getVersion; EmailBegin;
+ *                  ParseReplaceBR; PrintEmailMessage; getVersion; EmailBegin;
  * 
- * V0 20-XII-2024   []
+ * V0 25-XII-2024   []
  */
 #ifndef SlimEmail_h
     #define SlimEmail_h
@@ -56,11 +56,12 @@
         public:
             SlimEmail(uint8_t CeaseEmail, uint8_t PrintSession, uint8_t PrintConnection);       		// constructor
             EmailControl GenericEmailSend(EmailControl _EmailContIn, TimePack _SysEClock);
-            uint8_t sendSlimEmail(const char* recipient, char* Msg_Subject, char* Msg_Body, char* responseBuffer, bool PrintEcho);
-            uint8_t ServerResponseAnlysis(char* buffer);
-            char* sendCommand(char* cmd, bool Wait4Response,char* buffer, uint16_t bufferSize, bool PrintEcho);
-            void base64Encode(const char* input, char* output, size_t outputSize);
-            char* ParseReplaceBR(char* buff) ;
+            uint8_t     sendSlimEmail(const char* recipient, char* Msg_Subject, char* Msg_Body, char* responseBuffer, bool PrintEcho);
+            uint8_t     ServerResponseAnlysis(char* buffer);
+            char*       sendCommand(char* cmd, bool Wait4Response,char* buffer, uint16_t bufferSize, bool PrintEcho);
+            void        base64Encode(const char* input, char* output, size_t outputSize);
+            char*       ParseReplaceBR(char* buff) ;
+            void        PrintEmailMessage(EmailControl _EmailContIn,TimePack _SysEClock,bool printMe);
             const char* getVersion();
             EmailControl EmailBegin(EmailControl EmailControl, char* buffer, uint8_t DefaultEmailType);
             #if  BACKUPVERSION==1

@@ -4,7 +4,7 @@
  * in this file:    GenericEmailSend; sendSlimEmail; ServerResponseAnlysis; sendCommand; base64Encode; 
  *                  ParseReplaceBR; PrintEmailMessage; getVersion; EmailBegin;
  *
- * V0 25-XII-2024   []
+ * V0 26-XII-2024   []
  * 
  */
 
@@ -505,7 +505,7 @@ void  SlimEmail::PrintEmailMessage(EmailControl _EmailContIn,TimePack _SysEClock
    */
   static const char Mname[] PROGMEM = "PrintEmailMessage:";
   if ( printMe ) {              // print preped message
-    _RunEUtil.InfoStamp(_SysEClock,Mname,nullptr,1,0); Serial.print(F("Subject:\t")); Serial.print(_EmailContIn.Subject);
+    _RunEUtil.InfoStamp(_SysEClock,Mname,nullptr,1,0); Serial.print(F("\nSubject:\t")); Serial.print(_EmailContIn.Subject);
     Serial.print(F("\tSubject len=")); Serial.print(strlen(_EmailContIn.Subject)); 
     Serial.print(F("\nMessage:")); _RunEUtil.PrintEmailBuf(_EmailContIn.Body);
     Serial.print(F("Message body len=")); Serial.print(strlen(_EmailContIn.Body));  Serial.print(F(" -END\n"));

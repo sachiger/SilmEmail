@@ -1,6 +1,6 @@
 {
     "name": "SlimEmail",
-    "version": "0.0.2",
+    "version": "0.1.0",
     "description": "Library to send email using Gmail with wifi client",
     "repository":
     {
@@ -20,7 +20,7 @@
     "platforms": ["espressif8266"],
     "build": {
         "flags": [
-          "-D SimpleEmailVersion=\\\"0.0.2\\\""
+          "-D SimpleEmailVersion=\\\"0.1.0\\\""
         ]
       }
 }

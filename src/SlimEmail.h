@@ -4,6 +4,7 @@
  * in this file:    GenericEmailSend; sendSlimEmail; ServerResponseAnlysis; sendCommand; base64Encode; 
  *                  ParseReplaceBR; PrintEmailMessage; getVersion; EmailBegin;
  * 
+ * V1 18-I-2025     [Explicitly Stop and Reinitialize WiFiClientSecure; send HTML or text messages]
  * V0 25-XII-2024   []
  */
 #ifndef SlimEmail_h
@@ -54,7 +55,7 @@
     //****************************************************************************************/
     class SlimEmail {
         public:
-            SlimEmail(uint8_t CeaseEmail, uint8_t PrintSession, uint8_t PrintConnection);       		// constructor
+            SlimEmail(uint8_t CeaseEmail, uint8_t PrintSession, uint8_t PrintConnection, bool HTMLorTEXT, uint8_t bodyColor);   // constructor
             EmailControl GenericEmailSend(EmailControl _EmailContIn, TimePack _SysEClock);
             uint8_t     sendSlimEmail(const char* recipient, char* Msg_Subject, char* Msg_Body, char* responseBuffer, bool PrintEcho);
             uint8_t     ServerResponseAnlysis(char* buffer);
@@ -72,6 +73,8 @@
             uint8_t _CeaseEmailSend;                    // simulate send without sending
             uint8_t _PrintEmailSession;                 // print the timing of connection to server stages 
             uint8_t _PrintConnectionTime;               // print dialouge with the server
+            bool    _HTMLorTEXT;                        // 1- HTML; 0- text
+            uint8_t _bodyColor;                         // for HTML, body color: 0-black; 1-red; 2-marron;
     };
 
 #endif  //SlimEmail_h

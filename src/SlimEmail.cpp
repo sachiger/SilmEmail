@@ -3,7 +3,8 @@
  *
  * in this file:    GenericEmailSend; sendSlimEmail; ServerResponseAnlysis; sendCommand; base64Encode; 
  *                  ParseReplaceBR; PrintEmailMessage; getVersion; EmailBegin;
- *
+ * 
+ * V1 18-I-2025     [Explicitly Stop and Reinitialize WiFiClientSecure; send HTML or text messages]
  * V0 26-XII-2024   []
  * 
  */
@@ -15,16 +16,18 @@
 #include    "Utilities.h"
 #include    "SlimEmail.h"
 
-TimePack  _SysEClock;                // clock data
-Clock     _RunEClock(_SysEClock);     // clock instance
-Utilities _RunEUtil(_SysEClock);      // Utilities instance
+TimePack  _SysEClock;                                               // clock data
+Clock     _RunEClock(_SysEClock);                                   // clock instance
+Utilities _RunEUtil(_SysEClock);                                    // Utilities instance
 WiFiClientSecure    SlimClient;
 
 // ****************************************************************************************/
-SlimEmail::SlimEmail(uint8_t CeaseEmail, uint8_t PrintSession, uint8_t PrintConnection){
+SlimEmail::SlimEmail(uint8_t CeaseEmail, uint8_t PrintSession, uint8_t PrintConnection, bool HTMLorTEXT, uint8_t bodyColor){
     _CeaseEmailSend = CeaseEmail;
     _PrintEmailSession = PrintSession;
     _PrintConnectionTime = PrintConnection;
+    _HTMLorTEXT = HTMLorTEXT;
+    _bodyColor = bodyColor;
 }   // end of SlimEmail
 
 // ****************************************************************************************/
@@ -35,7 +38,7 @@ EmailControl SlimEmail::GenericEmailSend(EmailControl _EmailContIn, TimePack _Sy
     static const char Mname[] PROGMEM = "GenericEmailSend:";
     static const char ErrorFailTooManyRetries[] PROGMEM = "997 Failed after too many retry attampts";
     static const char SimulatedSend[] PROGMEM = "Email sent (simulation)";
-    char responseBuffer[ServerResponseBufLen];              // buffer for serrver's response
+    char responseBuffer[ServerResponseBufLen];                      // buffer for serrver's response
     EmailControl _E = _EmailContIn;
     _E.EmailError = false;
 
@@ -44,39 +47,39 @@ EmailControl SlimEmail::GenericEmailSend(EmailControl _EmailContIn, TimePack _Sy
         strcpy_P(_E.ErrorBuffer,SimulatedSend);
         return _E;
     } // end of skip email send
-                                                            // initiate session
-    if ( _E.ConnectionSessionOn==0 ) {                      // session start
+                                                                    // initiate session
+    if ( _E.ConnectionSessionOn==0 ) {                              // session start
         _E.retries = 0;    
         _E.ConnectionSessionOn = true;
         _E.EmailMillis = millis();
     }   // end of session start check
-                                                            // send email
+                                                                    // send email
     _E.RC = sendSlimEmail(RECIPIENT_EMAIL, _E.Subject, _E.Body, responseBuffer, _PrintEmailSession);
     #if _DEBUGON==100
         _RunEUtil.InfoStamp(_SysEClock,Mname,nullptr,0,0); Serial.print(F("Slim RC=")); Serial.print(_E.RC); Serial.print(F(" -END\n"));
     #endif  //_DEBUGON==100
 
-                                                            // check results
-    if ( _E.RC==email_sent ) {                              // successful send
-        _E.ConnectionSessionOn = false;                     // terminate session
+                                                                    // check results
+    if ( _E.RC==email_sent ) {                                      // successful send
+        _E.ConnectionSessionOn = false;                             // terminate session
         #if _LOGGME==1
             _RunEUtil.InfoStamp(_SysEClock,Mname,nullptr,1,0); Serial.print(F("Email sent successfully! (attampt ")); 
             Serial.print(_E.retries+1); Serial.print(F(" to connect to server). Email send time ")); 
             Serial.print(_RunEClock.ElapseStopwatch(_E.EmailMillis)); Serial.print(F("mS -END\n"));
         #endif  //_LOGGME==1
-    } else {                                                // failure to send
+    } else {                                                        // failure to send
         _E.EmailError = true;
         #if _LOGGME==1
             _RunEUtil.InfoStamp(_SysEClock,Mname,nullptr,1,0); Serial.print(F("Attampt ")); 
             Serial.print(_E.retries+1); Serial.print(F(" to send email failed. RC=")); Serial.print(_E.RC); 
             Serial.print(F(" Reason: ")); Serial.print(_E.ErrorBuffer); Serial.print(F(" -END\n"));
         #endif  //_LOGGME==1
-                                                            // retries mechanism
-        _E.retries++;                                       // retries counter
-        if (_E.retries<Max_Retries) {                       // keep trying
-            _E.FlagEmailEvent=true;                         // signal to set <SendEmail> by calling method
-        } else {                                            // termination (failure)
-            _E.ConnectionSessionOn = false;                 // terminate session
+                                                                    // retries mechanism
+        _E.retries++;                                               // retries counter
+        if (_E.retries<Max_Retries) {                               // keep trying
+            _E.FlagEmailEvent=true;                                 // signal to set <SendEmail> by calling method
+        } else {                                                    // termination (failure)
+            _E.ConnectionSessionOn = false;                         // terminate session
             _E.RC = TooManyRetries_Error;
             strcpy_P(_E.ErrorBuffer,ErrorFailTooManyRetries);
             #if _LOGGME==1
@@ -100,7 +103,7 @@ uint8_t SlimEmail::sendSlimEmail(const char* recipient, char* Msg_Subject, char*
      *          3 - content error (Email_Content_Error)
      *          4 - (Send_Error)
      */
-    SlimClient.setBufferSizes(512, 512);
+    SlimClient.setBufferSizes(512, 512);                                // Reduce TX/RX buffer sizes
                                                                         // Connect to SMTP server
     SlimClient.setInsecure();                                           // Bypass SSL verification for testing
     if (SlimClient.connect(SMTP_HOST, SMTP_PORT)!=0) {                  // successful connection
@@ -112,30 +115,39 @@ uint8_t SlimEmail::sendSlimEmail(const char* recipient, char* Msg_Subject, char*
         }
         static const char FailToConnect[] PROGMEM = "998 Failed to connected to SMTP server.";
         strcpy_P(responseBuffer,FailToConnect);                         // error indication
+        SlimClient.stop();                                              // free up connection resources
         return  Could_not_connect;                                      // indicate failure
     }   // end off connection
     
                                                                         // Send EHLO
     responseBuffer = sendCommand("EHLO IoT.Server",1,responseBuffer,ServerResponseBufLen,PrintEcho);
-    if ( ServerResponseAnlysis(responseBuffer) != 1 ) return Could_not_connect;
+    if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
+                                                    SlimClient.stop();  // free up connection resources
+                                                    return Could_not_connect; }
                                                                         // Start TLS
     responseBuffer = sendCommand("STARTTLS",1,responseBuffer,ServerResponseBufLen,PrintEcho);
-    if ( ServerResponseAnlysis(responseBuffer) != 1 ) return Could_not_connect;
+    if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
+                                                    SlimClient.stop();  // free up connection resources
+                                                    return Could_not_connect; }
                                                                         // Authentication (Base64 Encode)
     responseBuffer = sendCommand("AUTH LOGIN",1,responseBuffer,ServerResponseBufLen,PrintEcho);
-    if ( ServerResponseAnlysis(responseBuffer) != 1 ) return Could_not_connect;
+    if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
+                                                    SlimClient.stop();  // free up connection resources
+                                                    return Could_not_connect; }
     char* base64buffer = new char[128];                                 // buffer to encode
         base64Encode(AUTHOR_EMAIL, base64buffer, 128);
         responseBuffer =                                                // Send encoded email
         sendCommand(base64buffer,1,responseBuffer,ServerResponseBufLen,PrintEcho);
         if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
                                                     delete [] base64buffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Authentication_Error;}
         base64Encode(AUTHOR_PASSWORD, base64buffer, 128);
         responseBuffer =                                                // Send encoded password
         sendCommand(base64buffer,1,responseBuffer,ServerResponseBufLen,PrintEcho);
         if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
                                                     delete [] base64buffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Authentication_Error;}
     delete [] base64buffer;
                                                                         // Mail From and TO
@@ -144,16 +156,19 @@ uint8_t SlimEmail::sendSlimEmail(const char* recipient, char* Msg_Subject, char*
         responseBuffer = sendCommand(mailPayloadBuffer,1,responseBuffer,ServerResponseBufLen,PrintEcho);
         if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
                                                     delete [] mailPayloadBuffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Authentication_Error; }
         snprintf(mailPayloadBuffer, EmailPayloadBufferSize, "RCPT TO:<%s>", recipient);
         responseBuffer = sendCommand(mailPayloadBuffer,1,responseBuffer,ServerResponseBufLen,PrintEcho);    
         if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
                                                     delete [] mailPayloadBuffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Authentication_Error; }
                                                                         // Data Section
         responseBuffer = sendCommand("DATA",1,responseBuffer,ServerResponseBufLen,PrintEcho);
         if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
                                                     delete [] mailPayloadBuffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Email_Content_Error; }
         snprintf(mailPayloadBuffer, EmailPayloadBufferSize, "From: \"%s\" <%s>", AUTHOR_NAME,AUTHOR_EMAIL);
         responseBuffer = sendCommand(mailPayloadBuffer,0,responseBuffer,ServerResponseBufLen,PrintEcho);
@@ -162,19 +177,39 @@ uint8_t SlimEmail::sendSlimEmail(const char* recipient, char* Msg_Subject, char*
         snprintf(mailPayloadBuffer, EmailPayloadBufferSize, "Subject: %s", Msg_Subject);
         responseBuffer = sendCommand(mailPayloadBuffer,0,responseBuffer,ServerResponseBufLen,PrintEcho);
     delete  [] mailPayloadBuffer;
-    responseBuffer = sendCommand("\r\n",0,responseBuffer,ServerResponseBufLen,PrintEcho);// terminate header
-    Msg_Body = ParseReplaceBR(Msg_Body);                                // replace <br> with CRLF
+    if ( _HTMLorTEXT )  responseBuffer =                                // set HTML context
+        sendCommand("Content-Type: text/html; charset=utf-8",0,responseBuffer,ServerResponseBufLen,PrintEcho);
+    responseBuffer = sendCommand("\r\n",0,responseBuffer,ServerResponseBufLen,PrintEcho);   // separate headers from body
+    if ( _HTMLorTEXT )  {                                               // start HTML
+        responseBuffer = sendCommand("<html>",0,responseBuffer,ServerResponseBufLen,PrintEcho);
+        char*   Style_Black = "<body style='color: black;'>";
+        char*   Style_Red = "<body style='color: red;'>";
+        char*   Style_Marron = "<body style='color: maroon;'>";
+        switch (_bodyColor ){                                           // apply color
+        case 0:     responseBuffer = sendCommand(Style_Black,0,responseBuffer,ServerResponseBufLen,PrintEcho); break;
+        case 1:     responseBuffer = sendCommand(Style_Red,0,responseBuffer,ServerResponseBufLen,PrintEcho); break;
+        case 2:     responseBuffer = sendCommand(Style_Marron,0,responseBuffer,ServerResponseBufLen,PrintEcho); break;
+        default:    responseBuffer = sendCommand(Style_Black,0,responseBuffer,ServerResponseBufLen,PrintEcho); break;
+        }
+    } else {
+        Msg_Body = ParseReplaceBR(Msg_Body);                            // replace <br> with CRLF
+    }
     responseBuffer = sendCommand(Msg_Body,0,responseBuffer,ServerResponseBufLen,PrintEcho);
+    if ( _HTMLorTEXT )  {                                               // end BODY HTML
+        responseBuffer = sendCommand("</body>",0,responseBuffer,ServerResponseBufLen,PrintEcho);
+        responseBuffer = sendCommand("</html>",0,responseBuffer,ServerResponseBufLen,PrintEcho);
+    }
     responseBuffer = sendCommand(".",1,responseBuffer,ServerResponseBufLen,PrintEcho);   //  to indicate the end of the message
     if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
-                                                    //delete [] responseBuffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Email_Content_Error;}
 
     // End the email
     responseBuffer = sendCommand("QUIT",1,responseBuffer,ServerResponseBufLen,PrintEcho);
     if ( ServerResponseAnlysis(responseBuffer) != 1 ) {
-                                                    //delete [] responseBuffer;
+                                                    SlimClient.stop();  // free up connection resources
                                                     return Send_Error;}
+    SlimClient.stop();                                                  // free up connection resources
     return  email_sent;
 }   // end of sendSlimEmail
 
